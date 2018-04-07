@@ -13,10 +13,7 @@ starter-code from lab 09
 HTML, CSS, Javascript, Jquery, Node.js, handlebars, PostreSQL
 
 ## Change Log
-04-04-2018 5:00pm - Created README File
-04-04-2018 8:44pm - Database has been created and Table has been filled with data
-04-06-2018 7:31pm - Added SQL statements
-4-07-2018 10:00am - Finished comments on server.js
+4-07-2018 03:05pm - Added Queries and Finished comments on server.js
 
 ## Credits and Collaborations
 Khoa Huynh
