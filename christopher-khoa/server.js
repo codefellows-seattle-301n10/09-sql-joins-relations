@@ -7,10 +7,10 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 
 //windows
-const conString = 'postgres://postgres:3874@localhost:5432/lab_09';
+// const conString = 'postgres://postgres:3874@localhost:5432/lab_09';
 
 //MAC
-// const conString = 'postgres://localhost:5432/DBNAME';
+const conString = 'postgres://localhost:5432/lab_09';
 
 const client = new pg.Client(conString);
 client.connect();
@@ -72,7 +72,7 @@ app.post('/articles', (request, response) => {
 
         // REVIEW: This is our third query, to be executed when the second is complete. We are also passing the author_id into our third query.
         // console.log(result.rows[0].author_id);
-        console.log(result.rows[0]);
+        // console.log(result.rows[0]);
         queryThree(result.rows[0].author_id);
       }
     )
@@ -101,20 +101,42 @@ app.post('/articles', (request, response) => {
 
 app.put('/articles/:id', function(request, response) {
   client.query(
-    ``,
-    []
+    `UPDATE authors
+    SET
+      author=$1,
+      "authorUrl"=$2
+    WHERE author_id=$3;
+    `,
+    [
+      request.body.author,
+      request.body.authorUrl,
+      request.body.author_id
+    ]
   )
     .then(() => {
       client.query(
-        ``,
-        []
+        `UPDATE articles
+        SET
+          title=$1,
+          category=$2,
+          "publishedOn"=$3,
+          body=$4
+        WHERE article_id=$5;
+        `,
+        [
+          request.body.title,
+          request.body.category,
+          request.body.publishedOn,
+          request.body.body,
+          request.params.id
+        ]
       )
     })
     .then(() => {
       response.send('Update complete');
     })
     .catch(err => {
-      console.error(err);
+      console.error('Error on Update', err);
     })
 });
 
