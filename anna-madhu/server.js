@@ -40,11 +40,14 @@ app.get('/articles', (request, response) => {
 app.post('/articles', (request, response) => {
   client.query(`
     INSERT INTO
-    articles(author_id, author)
-    SELECT author_id, $1, $2, $3, $4
-    FROM authors;
+    authors (author, "authorUrl")
+    VALUES ($1, $2)
+    ON CONFLICT DO NOTHING;
     `,
-    [],
+    [
+      request.body.author,
+      request.body.authorUrl
+    ],
     function(err) {
       if (err) console.error(err);
       // REVIEW: This is our second query, to be executed when this first query is complete.
@@ -54,7 +57,7 @@ app.post('/articles', (request, response) => {
 
   function queryTwo() {
     client.query(
-      ``,
+      `SELECT author FROM authors;`,
       [],
       function(err, result) {
         if (err) console.error(err);
@@ -67,8 +70,15 @@ app.post('/articles', (request, response) => {
 
   function queryThree(author_id) {
     client.query(
-      ``,
-      [],
+      `INSERT INTO articles (author_id, title, category, "publishedOn", body)
+      VALUES (author_id, $1, $2, $3, $4);`,
+      [
+        request.body.title,
+        request.body.author,
+        request.body.category,
+        request.body.publishedOn,
+        request.body.body
+      ],
       function(err) {
         if (err) console.error(err);
         response.send('insert complete');
