@@ -23,7 +23,7 @@ app.get('/new', (request, response) => {
 });
 //Write a SQL query to join all data from articles and authors tables on the author_id value of each when the articles are retrieved.
 // REVIEWED: These are routes for making API calls to enact CRUD operations on our database.
-app.get('/articles', (request, response) => {   //make this work with multiple tables, we already did it with single table
+app.get('/articles', (request, response) => { //make this work with multiple tables, we already did it with single table
   // CHANGE THE ORDER OF TABLES IF NOT WORKING
   client.query(`
     SELECT * FROM articles
@@ -42,10 +42,10 @@ app.post('/articles', (request, response) => {
   client.query(
     //Insert an author and pass the author and authorUrl as data for the query. On conflict, do nothing.
     //this is tricky because browser code thinks we are making just one article, but we are making two peices...the article and the author
-   
+
     `INSERT INTO authors(author, "authorUrl") VALUES($1, $2) ON CONFLICT DO NOTHING`,
     [request.body.author, request.body.authorUrl],
-    
+
     function(err) {
       if (err) console.error(err);
       // REVIEWED: This is our second query, to be executed when this first query is complete.
@@ -53,7 +53,7 @@ app.post('/articles', (request, response) => {
     }
   )
   //This is a 3 step query process
-//In the second query, add the SQL commands to retrieve a single author from the authors table. Add the author name as data for the query.
+  //In the second query, add the SQL commands to retrieve a single author from the authors table. Add the author name as data for the query.
   function queryTwo() {
     client.query(
       `SELECT author_id FROM authors
@@ -67,12 +67,12 @@ app.post('/articles', (request, response) => {
       }
     )
   }
-//In the third query, add the SQL commands to insert the new article using the author_id from the second query. Add the data from the new article, including the author_id, as data for the SQL query.
+  //In the third query, add the SQL commands to insert the new article using the author_id from the second query. Add the data from the new article, including the author_id, as data for the SQL query.
   function queryThree(author_id) {
     client.query(
       `INSERT INTO articles(author_id, title, category, "publishedOn", body) VALUES($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
       [request.author_id, request.body.title, request.body.category, request.body.publishedOn, request.body.body],
-      
+
       function(err) {
         if (err) console.error(err);
         response.send('insert complete');
@@ -83,13 +83,21 @@ app.post('/articles', (request, response) => {
 
 app.put('/articles/:id', function(request, response) {
   client.query(
-    ``,
-    []
+    `UPDATE authors
+     SET author = $1,
+        "authorUrl" =$2
+     WHERE author_id =$3`,
+    [request.body.author, request.body.authorUrl, request.body.author_id]
   )
     .then(() => {
       client.query(
-        ``,
-        []
+        `UPDATE article
+         SET title = $1,
+         category =$2,
+         "publishedOn" = $3,
+         body = $4,
+        WHERE author_id =$5`,
+        [request.body.title, request.body.category, request.body.publishedOn, request.body.body, request.body.author_id]
       )
     })
     .then(() => {
@@ -160,7 +168,7 @@ function loadArticles() {
             FROM authors
             WHERE author=$5;
             `,
-              [ele.title, ele.category, ele.publishedOn, ele.body, ele.author]
+            [ele.title, ele.category, ele.publishedOn, ele.body, ele.author]
             )
           })
         })
