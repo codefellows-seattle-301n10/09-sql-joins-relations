@@ -6,7 +6,7 @@ const express = require('express');
 const PORT = process.env.PORT || 3000;
 const app = express();
 
-const conString = '';
+const conString = '';//make this right
 const client = new pg.Client(conString);
 client.connect();
 client.on('error', error => {
@@ -23,8 +23,11 @@ app.get('/new', (request, response) => {
 });
 
 // REVIEW: These are routes for making API calls to enact CRUD operations on our database.
-app.get('/articles', (request, response) => {
-  client.query(``)
+app.get('/articles', (request, response) => {   //make this work with multiple tables, we already did it with single table
+  client.query(`
+  //code goes here
+  
+  `)
     .then(result => {
       response.send(result.rows);
     })
@@ -35,7 +38,11 @@ app.get('/articles', (request, response) => {
 
 app.post('/articles', (request, response) => {
   client.query(
-    '',
+    //this is tricky because browser code thinks we are making just one article, but we are making two peices...the article and the author
+    '
+    
+    
+    ',
     [],
     function(err) {
       if (err) console.error(err);
@@ -43,11 +50,15 @@ app.post('/articles', (request, response) => {
       queryTwo();
     }
   )
+  //This is a 3 step query process
 
   function queryTwo() {
     client.query(
-      ``,
-      [],
+      `
+      
+      
+      `,
+      [],//use this array using same concention as last lab with $1, $2, etc
       function(err, result) {
         if (err) console.error(err);
 
@@ -59,7 +70,10 @@ app.post('/articles', (request, response) => {
 
   function queryThree(author_id) {
     client.query(
-      ``,
+      `
+      
+      
+      `,
       [],
       function(err) {
         if (err) console.error(err);
