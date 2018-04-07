@@ -80,13 +80,24 @@ app.post('/articles', (request, response) => {
 
 app.put('/articles/:id', function(request, response) {
   client.query(
-    `SELECT author FROM authors WHERE author=$1`,
-    [request.body.author_id]
+    `UPDATE authors
+    SET
+    author=$1,
+    "authorUrl"=$2
+    WHERE author_id=$3`,
+    [request.body.author, request.body.authorUrl, request.body.author_id]
   )
+
     .then(() => {
-      client.query(
-        `SELECT articles FROM articles WHERE article_id=$1`,
-        []
+      client.query(`
+      UPDATE articles
+        SET
+        title=$1, 
+        category=$2, 
+        "publishedOn"=$3, 
+        body=$4
+        WHERE article_id=$5`,
+        [request.body.title, request.body.category, request.body.publishedOn, request.body.body, request.params.id]
       )
     })
     .then(() => {
