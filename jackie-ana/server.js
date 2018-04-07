@@ -24,10 +24,11 @@ app.get('/new', (request, response) => {
 
 // REVIEWED: These are routes for making API calls to enact CRUD operations on our database.
 app.get('/articles', (request, response) => {
-  client.query(`SELECT *
-  FROM authors
-  INNER JOIN articles
-  ON authors.author_id = articles.author_id;`)
+  client.query(`
+  SELECT * FROM articles
+  INNER JOIN authors
+  ON articles.author_id = authors.author_id;
+  `)
     .then(result => {
       response.send(result.rows);
     })
@@ -39,26 +40,20 @@ app.get('/articles', (request, response) => {
 app.post('/articles', (request, response) => {
   client.query(
     `INSERT INTO
-    authors(author, "authorUrl") VALUES($1, $2) ON CONFLICT DO NOTHING;`,
+    authors(author, "authorUrl") VALUES($1, $2) ON CONFLICT DO NOTHING;`, 
+    [request.body.author, request.body.authorUrl],
     function(err) {
       if (err) console.error(err);
       // REVIEW: This is our second query, to be executed when this first query is complete.
-      client.query(
-        `INSERT INTO
-        articles(authors.author_id, title, category, "publishedOn", body)
-        SELECT authors.author_id, $1, $2, $3, $4
-        FROM authors
-        WHERE author=$5;`)
       queryTwo();
     }
   )
   function queryTwo() {
     client.query(
-      `SELECT author FROM authors WHERE author_id=$1;`,
-      [],
+      `SELECT author_id FROM authors WHERE author=($1);`,
+      [request.body.author],
       function(err, result) {
         if (err) console.error(err);
-
         // REVIEW: This is our third query, to be executed when the second is complete. We are also passing the author_id into our third query.
         queryThree(result.rows[0].author_id);
       }
@@ -66,8 +61,15 @@ app.post('/articles', (request, response) => {
   }
 
   function queryThree(author_id) {
-    client.query(`INSERT INTO articles FROM authors WHERE author_id$5;`,
-      [],
+    client.query(
+      `INSERT INTO articles(author_id, title, category, "publishedOn", body) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING;`,
+      [
+        author_id,
+        request.body.title,
+        request.body.category,
+        request.body.publishedOn,
+        request.body.body
+      ],
       function(err) {
         if (err) console.error(err);
         response.send('insert complete');
@@ -78,12 +80,12 @@ app.post('/articles', (request, response) => {
 
 app.put('/articles/:id', function(request, response) {
   client.query(
-    ``,
-    []
+    `SELECT author FROM authors WHERE author=$1`,
+    [request.body.author_id]
   )
     .then(() => {
       client.query(
-        ``,
+        `SELECT articles FROM articles WHERE article_id=$1`,
         []
       )
     })
