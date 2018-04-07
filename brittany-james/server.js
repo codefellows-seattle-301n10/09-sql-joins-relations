@@ -14,7 +14,7 @@ client.on('error', error => {
 });
 
 app.use(express.json());
-app.use(express.urlencoded());
+app.use(express.urlencoded({extended:true}));
 app.use(express.static('./public'));
 
 // REVIEWED: These are routes for requesting HTML resources.
@@ -24,7 +24,7 @@ app.get('/new', (request, response) => {
 
 // REVIEWED: These are routes for making API calls to enact CRUD operations on our database.
 app.get('/articles', (request, response) => {
-  client.query(`SELECT * FROM articles JOIN authors ON articles.author_id = authors.author_id;`) //<------ DONE
+  client.query(`SELECT * FROM articles INNER JOIN authors ON articles.author_id = authors.author_id;`) //<------ DONE
     .then(result => {
       response.send(result.rows);
     })
@@ -33,21 +33,23 @@ app.get('/articles', (request, response) => {
     });
 });
 
-app.post('/articles', (request, response) => {
+app.post(`/articles`, (request, response) => {
   client.query(
-    'INSERT INTO authors(author, "authorUrl") VALUES($1, $2) ON CONFLICT DO NOTHING', //<------DONE
-    [],
+    `INSERT INTO authors (author, "authorUrl") VALUES($1, $2) ON CONFLICT DO NOTHING;`,
+    [request.body.author,
+      request.body.authorUrl],
     function(err) {
       if (err) console.error(err);
-      // REVIEWED: This is our second query, to be executed when this first query is complete.
+      // REVIEW: This is our second query, to be executed when this first query is complete.
       queryTwo();
     }
   )
 
   function queryTwo() {
     client.query(
-      `SELECT author FROM authors (authors)`, //<------
-      [], //<------
+      `SELECT author_id FROM authors
+      WHERE author=$1`,
+      [request.body.author],
       function(err, result) {
         if (err) console.error(err);
 
@@ -59,19 +61,17 @@ app.post('/articles', (request, response) => {
 
   function queryThree(author_id) {
     client.query(
-      `INSERT INTO
-      articles(title, author, "authorUrl", category, "publishedOn", body)
-      VALUES (${author_id} $1, $2, $3, $4, $5, $6);`, //<------DONE
-      [ request.body.title,
-        request.body.author,
-        request.body.authorUrl,
+      `INSERT INTO articles(author_id, title, category, "publishedOn", body)
+      VALUES($1, $2, $3, $4, $5);`,
+      [ author_id,
+        request.body.title,
         request.body.category,
         request.body.publishedOn,
-        request.body.body], //<------DONE
+        request.body.body],
 
       function(err) {
         if (err) console.error(err);
-        response.send('insert complete');
+        response.send(`insert complete`);
       }
     );
   }
@@ -79,13 +79,19 @@ app.post('/articles', (request, response) => {
 
 app.put('/articles/:id', function(request, response) {
   client.query(
-    ``, //<------
-    [] //<------
+    `UPDATE authors SET author = $1 WHERE author_id = $2;`, //<------
+    [request.body.author,
+      request.body.author_id] //<------
   )
     .then(() => {
       client.query(
-        ``, //<------
-        [] //<------
+        `UPDATE articles SET title = $1, category = $2, "publishedOn" = $3, body = $4
+        WHERE articles.article_id = $5`,
+        [request.body.title,
+          request.body.category,
+          request.body.publishedOn,
+          request.body.body,
+          request.params.id] //<------
       )
     })
     .then(() => {
