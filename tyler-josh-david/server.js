@@ -3,7 +3,7 @@
 const pg = require('pg');
 const fs = require('fs');
 const express = require('express');
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 const app = express();
 
 const conString = 'postgres://localhost:5432/poop';
@@ -14,7 +14,7 @@ client.on('error', error => {
 });
 
 app.use(express.json());
-app.use(express.urlencoded());
+app.use(express.urlencoded({extended: true}));
 app.use(express.static('./public'));
 
 // REVIEW: These are routes for requesting HTML resources.
@@ -24,7 +24,7 @@ app.get('/new', (request, response) => {
 
 // REVIEW: These are routes for making API calls to enact CRUD operations on our database.
 app.get('/articles', (request, response) => {
-  client.query(``)
+  client.query(`SELECT * FROM articles join authors on authors.author_id=articles.author_id;`)
     .then(result => {
       response.send(result.rows);
     })
@@ -35,7 +35,7 @@ app.get('/articles', (request, response) => {
 
 app.post('/articles', (request, response) => {
   client.query(
-    '',
+    'INSERT INTO articles (author, "authroUrl")VALUES($1, $2) ON CONFLICT DO NOTHING;',
     [],
     function(err) {
       if (err) console.error(err);
@@ -46,7 +46,7 @@ app.post('/articles', (request, response) => {
 
   function queryTwo() {
     client.query(
-      ``,
+      `SELECT author FROM authors`,
       [],
       function(err, result) {
         if (err) console.error(err);
@@ -59,8 +59,15 @@ app.post('/articles', (request, response) => {
 
   function queryThree(author_id) {
     client.query(
-      ``,
-      [],
+      `INSERT INTO articles(title, author, "authorUrl", category, "publishedOn", body)
+      VALUES ($1, $2, $3, $4, $5, $6);`,
+      [ request.body.title,
+        request.body.author_id,
+        request.body.authorUrl,
+        request.body.category,
+        request.body.publishedOn,
+        request.body.body],
+
       function(err) {
         if (err) console.error(err);
         response.send('insert complete');
