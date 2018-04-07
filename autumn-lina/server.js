@@ -6,7 +6,7 @@ const express = require('express');
 const PORT = process.env.PORT || 3000;
 const app = express();
 
-const conString = '';//make this right
+const conString = 'postgres://localhost:5432/lab9';
 const client = new pg.Client(conString);
 client.connect();
 client.on('error', error => {
@@ -14,19 +14,20 @@ client.on('error', error => {
 });
 
 app.use(express.json());
-app.use(express.urlencoded());
+app.use(express.urlencoded({extended:true}));
 app.use(express.static('./public'));
 
-// REVIEW: These are routes for requesting HTML resources.
+// REVIEWED: These are routes for requesting HTML resources.
 app.get('/new', (request, response) => {
   response.sendFile('new.html', {root: './public'});
 });
 
-// REVIEW: These are routes for making API calls to enact CRUD operations on our database.
-app.get('/articles', (request, response) => {   //make this work with multiple tables, we already did it with single table
+// REVIEWED: These are routes for making API calls to enact CRUD operations on our database.
+app.get('/articles', (request, response) => { 
   client.query(`
-  //code goes here
-  
+    SELECT * FROM articles
+    INNER JOIN authors
+    ON articles.author_id=authors.author_id; 
   `)
     .then(result => {
       response.send(result.rows);
@@ -38,43 +39,35 @@ app.get('/articles', (request, response) => {   //make this work with multiple t
 
 app.post('/articles', (request, response) => {
   client.query(
-    //this is tricky because browser code thinks we are making just one article, but we are making two peices...the article and the author
-    '
-    
-    
-    ',
-    [],
+    `INSERT INTO authors(author, "authorUrl") VALUES($1, $2) ON CONFLICT DO NOTHING`,
+    [request.body.author, request.body.authorUrl],
+
     function(err) {
       if (err) console.error(err);
-      // REVIEW: This is our second query, to be executed when this first query is complete.
+      // REVIEWED: This is our second query, to be executed when this first query is complete.
       queryTwo();
     }
   )
-  //This is a 3 step query process
-
+  
   function queryTwo() {
     client.query(
-      `
-      
-      
-      `,
-      [],//use this array using same concention as last lab with $1, $2, etc
+      `SELECT author_id FROM authors
+      WHERE author=$1`,
+      [request.body.author],
       function(err, result) {
         if (err) console.error(err);
 
-        // REVIEW: This is our third query, to be executed when the second is complete. We are also passing the author_id into our third query.
+        // REVIEWED: This is our third query, to be executed when the second is complete. We are also passing the author_id into our third query.
         queryThree(result.rows[0].author_id);
       }
     )
   }
-
+  
   function queryThree(author_id) {
     client.query(
-      `
-      
-      
-      `,
-      [],
+      `INSERT INTO articles(author_id, title, category, "publishedOn", body) VALUES($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+      [author_id, request.body.title, request.body.category, request.body.publishedOn, request.body.body],
+
       function(err) {
         if (err) console.error(err);
         response.send('insert complete');
@@ -84,14 +77,23 @@ app.post('/articles', (request, response) => {
 });
 
 app.put('/articles/:id', function(request, response) {
-  client.query(
-    ``,
-    []
+
+  console.log('request.body', request.body);
+
+  client.query(`
+  UPDATE authors SET author=$1,"authorUrl"=$2 WHERE author_id=$3`,[request.body.author, request.body.authorUrl, request.body.author_id]
   )
     .then(() => {
-      client.query(
-        ``,
-        []
+      console.log("Done with first part of PUT");
+      client.query(`
+
+      UPDATE articles 
+      SET title=$1,category=$2,"publishedOn"=$3,body=$4 
+      WHERE article_id=$5
+      
+      `,
+      
+      [request.body.title, request.body.category, request.body.publishedOn, request.body.body, request.params.id]
       )
     })
     .then(() => {
@@ -125,7 +127,7 @@ app.delete('/articles', (request, response) => {
     });
 });
 
-// REVIEW: This calls the loadDB() function, defined below.
+// REVIEWED: This calls the loadDB() function, defined below.
 loadDB();
 
 app.listen(PORT, () => {
@@ -136,7 +138,7 @@ app.listen(PORT, () => {
 //////// ** DATABASE LOADERS ** ////////
 ////////////////////////////////////////
 
-// REVIEW: This helper function will load authors into the DB if the DB is empty.
+// REVIEWED: This helper function will load authors into the DB if the DB is empty.
 function loadAuthors() {
   fs.readFile('./public/data/hackerIpsum.json', 'utf8', (err, fd) => {
     JSON.parse(fd).forEach(ele => {
@@ -148,7 +150,7 @@ function loadAuthors() {
   })
 }
 
-// REVIEW: This helper function will load articles into the DB if the DB is empty.
+// REVIEWED: This helper function will load articles into the DB if the DB is empty.
 function loadArticles() {
   client.query('SELECT COUNT(*) FROM articles')
     .then(result => {
@@ -162,7 +164,7 @@ function loadArticles() {
             FROM authors
             WHERE author=$5;
             `,
-              [ele.title, ele.category, ele.publishedOn, ele.body, ele.author]
+            [ele.title, ele.category, ele.publishedOn, ele.body, ele.author]
             )
           })
         })
@@ -170,7 +172,7 @@ function loadArticles() {
     })
 }
 
-// REVIEW: Below are two queries, wrapped in the loadDB() function, which create separate tables in our DB, and create a relationship between the authors and articles tables.
+// REVIEWED: Below are two queries, wrapped in the loadDB() function, which create separate tables in our DB, and create a relationship between the authors and articles tables.
 // THEN they load their respective data from our JSON file.
 function loadDB() {
   client.query(`
