@@ -83,11 +83,11 @@ Article.prototype.updateRecord = function(callback) {
   });
 };
 
-Article.testPut = function() {
+// Article.testPut = function() {
 
-  let art = Article.all[0];
-  art.title = "TEST";
-  art.author = "Tesrte";
+//   let art = Article.all[0];
+//   art.title = 'TEST';
+//   art.author = 'Tester';
 
-  art.updateRecord(() => console.log('yippee'));
-}
+//   art.updateRecord(() => console.log('yippee'));
+// }
