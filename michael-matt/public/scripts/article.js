@@ -82,3 +82,12 @@ Article.prototype.updateRecord = function(callback) {
     if (callback) callback();
   });
 };
+
+Article.testPut = function() {
+
+  let art = Article.all[0];
+  art.title = "TEST";
+  art.author = "Tesrte";
+
+  art.updateRecord(() => console.log('yippee'));
+}

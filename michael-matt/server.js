@@ -39,9 +39,15 @@ app.get('/articles', (request, response) => {
 });
 
 app.post('/articles', (request, response) => {
+  console.log('hello');
   client.query(
-    '',
-    [],
+    `INSERT INTO authors(author, "authorUrl")
+    VALUES($1, $2)
+    ON CONFLICT DO NOTHING;`,
+    [
+      request.body.author,
+      request.body.authorUrl,
+    ],
     function(err) {
       if (err) console.error(err);
       // REVIEW: This is our second query, to be executed when this first query is complete.
@@ -51,8 +57,12 @@ app.post('/articles', (request, response) => {
 
   function queryTwo() {
     client.query(
-      ``,
-      [],
+      `SELECT author_id
+      FROM authors
+      WHERE author = $1;`,
+      [
+        request.body.author,
+      ],
       function(err, result) {
         if (err) console.error(err);
 
@@ -62,11 +72,17 @@ app.post('/articles', (request, response) => {
     )
   }
 
+  // In the third query, add the SQL commands to insert the new article using the author_id from the second query. Add the data from the new article, including the author_id, as data for the SQL query.
   function queryThree(author_id) {
     console.log(author_id);
     client.query(
-      ``,
-      [],
+      `INSERT INTO articles(author_id, title, category, "publishedOn", body)
+      VALUES ($1, $2, $3, $4, $5) ;`,
+      [ author_id,
+        request.body.title,
+        request.body.category,
+        request.body.publishedOn,
+        request.body.body],
       function(err) {
         if (err) console.error(err);
         response.send('insert complete');
@@ -77,13 +93,24 @@ app.post('/articles', (request, response) => {
 
 app.put('/articles/:id', function(request, response) {
   client.query(
-    ``,
-    []
+    `UPDATE authors
+    SET author = $1
+    WHERE author_id =$2;`,
+    [request.body.author,
+      request.body.author_id]
   )
     .then(() => {
       client.query(
-        ``,
-        []
+        `UPDATE articles
+        SET title=$1, category=$2, "publishedOn"=$3, body=$4
+        WHERE articles.article_id = $5`,
+
+        [
+          request.body.title,
+          request.body.category,
+          request.body.publishedOn,
+          request.body.body,
+          request.params.id]
       )
     })
     .then(() => {
