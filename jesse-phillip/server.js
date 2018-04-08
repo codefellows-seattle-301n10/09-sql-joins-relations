@@ -6,7 +6,7 @@ const express = require('express');
 const PORT = process.env.PORT || 3000;
 const app = express();
 
-const conString = 'postgres://postgres:82469173@localhost:5432/lab_09';
+const conString = 'postgres://postgres:Achika1220!@localhost:5432/lab_09';
 const client = new pg.Client(conString);
 client.connect();
 client.on('error', error => {
@@ -27,7 +27,7 @@ app.get('/articles', (request, response) => {
   client.query(`
   SELECT * FROM authors
   INNER JOIN articles
-  ON author.id=articles.author_id;
+  ON authors.author_id=articles.author_id;
   `)
     .then(result => {
       response.send(result.rows);
@@ -39,8 +39,8 @@ app.get('/articles', (request, response) => {
 
 app.post('/articles', (request, response) => {
   client.query(
-    `INSERT INTO authors (author, "authorUrl")
-    VALUES ($1, $2)
+    `INSERT INTO authors(author, "authorUrl")
+    VALUES($1, $2)
     ON CONFLICT DO NOTHING;
     `,
     [
@@ -56,9 +56,9 @@ app.post('/articles', (request, response) => {
 
   function queryTwo() {
     client.query(
-      `SELECT author_id FROM authors WHERE author_id =$1
+      `SELECT author_id FROM authors WHERE author=($1)
       `,
-      [request.body.author_id],
+      [request.body.author],
       function(err, result) {
         if (err) console.error(err);
 
@@ -71,10 +71,10 @@ app.post('/articles', (request, response) => {
   function queryThree(author_id) {
     // In the third query, add the SQL commands to insert the new article using the author_id from the second query. Add the data from the new article, including the author_id, as data for the SQL query.
     client.query(
-      `INSERT INTO articles(article_id, author_id, title, category, "publishedOn", body)
-      VALUES ($1, $2, $3, $4, $5, $6);
+      `INSERT INTO articles(author_id, title, category, "publishedOn", body)
+      VALUES($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING
       `,
-      [request.body.article_id, 
+      [
         author_id,
         request.body.title,
         request.body.category,
@@ -91,32 +91,35 @@ app.post('/articles', (request, response) => {
 
 app.put('/articles/:id', function(request, response) {
   client.query(
-    `INSERT INTO authors (author_id, author, "authorUrl") 
-    VALUES ($1, $2, $3)
+    `UPDATE authors
+    SET 
+    author=$1,
+    "authorUrl"=$2
+    WHERE author_id=$3;
     `,
     [
-      request.body.author_id,
       request.body.author,
-      request.body.authorUrl
+      request.body.authorUrl,
+      request.body.author_id
     ]
   )
     .then(() => {
       client.query(
         `UPDATE articles
-        SET 
-        article_id = $1
-        author_id = $2 
-        title = $3
-        category = $4
-        "publishedOn" = $5
-         body = $6; 
+        SET  
+        title = $1,
+        category = $2,
+        "publishedOn" = $3,
+        body = $4
+        WHERE author_id=$5; 
         `,
-        [request.body.article_id, 
-          request.body.author_id,
+        [
           request.body.title,
           request.body.category,
           request.body.publishedOn,
-          request.body.body]
+          request.body.body,
+          request.body.author_id
+        ]
       )
     })
     .then(() => {
