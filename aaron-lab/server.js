@@ -6,7 +6,7 @@ const express = require('express');
 const PORT = process.env.PORT || 3000;
 const app = express();
 
-const conString = '';
+const conString = '//localhost:';
 const client = new pg.Client(conString);
 client.connect();
 client.on('error', error => {
@@ -24,7 +24,11 @@ app.get('/new', (request, response) => {
 
 // REVIEW: These are routes for making API calls to enact CRUD operations on our database.
 app.get('/articles', (request, response) => {
-  client.query(`SELECT * FROM articles join authors on authors.authors_id=articles.authors_id `)
+  client.query(`
+    SELECT * FROM articles
+    join authors
+    on authors.authors_id=articles.authors_id;
+    `)
     .then(result => {
       response.send(result.rows);
     })
@@ -35,8 +39,16 @@ app.get('/articles', (request, response) => {
 
 app.post('/articles', (request, response) => {
   client.query(
-    '',
-    [],
+    `
+    INSERT INTO authors
+    (author,"authorUrl")
+    VALUES($1, $2)
+    ON CONFLICT DO NOTHING;
+    `,
+    [
+      request.body.author,
+      request.body.authorUrl
+    ],
     function(err) {
       if (err) console.error(err);
       // REVIEW: This is our second query, to be executed when this first query is complete.
@@ -46,8 +58,12 @@ app.post('/articles', (request, response) => {
 
   function queryTwo() {
     client.query(
-      ``,
-      [],
+      `
+      SELECT author_id
+      FROM authors
+      WHERE author_id=$1
+      `,
+      [request.body.author],
       function(err, result) {
         if (err) console.error(err);
 
@@ -59,8 +75,18 @@ app.post('/articles', (request, response) => {
 
   function queryThree(author_id) {
     client.query(
-      ``,
-      [],
+      `
+      INSERT INTO articles
+      (author_id, title, category, body, "publishedOn")
+      VALUES($1,$2,$3,$4,$5);
+      `,
+      [
+        author_id,
+        request.body.title,
+        request.body.category,
+        request.body.body,
+        request.body.publishedOn
+      ],
       function(err) {
         if (err) console.error(err);
         response.send('insert complete');
@@ -71,13 +97,35 @@ app.post('/articles', (request, response) => {
 
 app.put('/articles/:id', function(request, response) {
   client.query(
-    ``,
-    []
+    `
+    UPDATE authors SET author=$1, "authorUrl"=$2
+    WHERE author_id=$3;
+    `,
+    [
+      request.body.author,
+      request.body.authorUrl,
+      request.body.author_id
+    ]
   )
     .then(() => {
       client.query(
-        ``,
-        []
+        `
+        UPDATE loadArticles
+        SET author_id=$1,
+        title=$2,
+        category=$3,
+        body=$4,
+        "publishedOn"=$5
+        WHERE article_id=$6
+        `,
+        [
+          request.body.author_id
+          request.body.title
+          request.body.category
+          request.body.body
+          request.body.publishedOn
+          request.params.id
+        ]
       )
     })
     .then(() => {
