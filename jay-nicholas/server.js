@@ -4,10 +4,11 @@ const fs = require('fs');
 const express = require('express');
 const PORT = process.env.PORT || 3000;
 const app = express();
-const conString = 'postgres://postgres:GreyMyth540**@LOCALHOST:5432/lab09sql';
-const client = new pg.Client(conString);
 
+const conString = 'postgres://postgres:wasd@localhost:5432/lab09sql';
+const client = new pg.Client(conString);
 client.connect();
+
 client.on('error', error => {
   console.error(error);
 });
@@ -15,16 +16,19 @@ client.on('error', error => {
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(express.static('./public'));
+
 // REVIEWED: These are routes for requesting HTML resources.
 app.get('/new', (request, response) => {
   response.sendFile('new.html', {root: './public'});
 });
 // REVIEWED: These are routes for making API calls to enact CRUD operations on our database.
 app.get('/articles', (request, response) => {
+  console.log('Grabbing stuff!');
   client.query(`
-  SELECT * FROM articles
-  INNER JOIN authors ON articles.author_id=authors.author_id;
-  `)
+    SELECT * FROM articles
+    INNER JOIN authors 
+    ON articles.author_id = authors.author_id;
+    `)
     .then(result => {
       response.send(result.rows);
     })
@@ -34,32 +38,37 @@ app.get('/articles', (request, response) => {
 });
 app.post('/articles', (request, response) => {
   client.query(`
-    INSERT INTO authors(author, "authorUrl")
+    INSERT INTO authors
+    (author, "authorUrl")
     VALUES($1, $2) 
-    ON CONFLICT DO NOTHING;`, 
-    [request.body.author, request.body.authorUrl],
-    function(err) {
-      if (err) console.error(err);
-      queryTwo();
-    }
-  )
+    ON CONFLICT DO NOTHING;`,
+  [ request.body.author, request.body.authorUrl ],
+  function(err) {
+    if (err) console.error(err);
+    queryTwo();
+  })
   function queryTwo() {
     client.query(`
-    SELECT author_id FROM authors WHERE author=$1;`,
-      [request.body.author],
-      function(err, result) {
-        if (err) console.error(err);
-        // REVIEW: This is our third query, to be executed when the second is complete. We are also passing the author_id into our third query.
-        queryThree(result.rows[0].author_id);
-      }
+      SELECT author_id 
+      FROM authors 
+      WHERE author=$1;
+      `,
+    [request.body.author],
+    function(err, result) {
+      if (err) console.error(err);
+      // REVIEW: This is our third query, to be executed when the second is complete. We are also passing the author_id into our third query.
+      queryThree(result.rows[0].author_id);
+    }
     )
   }
   function queryThree(author_id) {
-    client.query(`
-    INSERT INTO 
-    articles(author_id, title, category, "publishedOn", body) 
-    VALUES ($1, $2, $3, $4, $5) 
-    ON CONFLICT DO NOTHING;`,
+    client.query(
+      `
+      INSERT INTO 
+      articles(author_id, title, category, "publishedOn", body) 
+      VALUES ($1, $2, $3, $4, $5) 
+      ON CONFLICT DO NOTHING;
+      `,
       [
         author_id,
         request.body.title,
@@ -76,17 +85,27 @@ app.post('/articles', (request, response) => {
 });
 app.put('/articles/:id', function(request, response) {
   client.query(`
-    UPDATE authors SET author=$1, "authorURL"=$1 
-    WHERE author_id=$3`,
-    [request.body.author, request.body.authorUrl, request.body.author_id]
+    UPDATE authors 
+    SET author=$1, "authorURL"=$2
+    WHERE author_id=$3;`,
+  [
+    request.body.author,
+    request.body.authorUrl,
+    request.body.author_id
+  ]
   )
     .then(() => {
       client.query(`
-        UPDATE articles
-        SET title=$1, category=$2, "publishedOn"=$3, body=$4 
-        WHERE author_id=$5`,
-        [request.body.title, request.body.category, request.body.publishedOn, request.body.body, request.body.author_id]
-      )
+      UPDATE articles
+      SET title=$1, category=$2, "publishedOn"=$3, body=$4 
+      WHERE articles.article_id=$5;`,
+      [
+        request.body.title,
+        request.body.category,
+        request.body.publishedOn,
+        request.body.body,
+        request.params.id
+      ])
     })
     .then(() => {
       response.send('Update complete');
@@ -108,7 +127,7 @@ app.delete('/articles/:id', (request, response) => {
     });
 });
 app.delete('/articles', (request, response) => {
-  client.query('DELETE FROM articles')
+  client.query('DELETE FROM articles;')
     .then(() => {
       response.send('Delete complete');
     })
@@ -128,7 +147,7 @@ function loadAuthors() {
   fs.readFile('./public/data/hackerIpsum.json', 'utf8', (err, fd) => {
     JSON.parse(fd).forEach(ele => {
       client.query(
-        'INSERT INTO authors(author, "authorUrl") VALUES($1, $2) ON CONFLICT DO NOTHING',
+        'INSERT INTO authors(author, "authorUrl") VALUES($1, $2) ON CONFLICT DO NOTHING;',
         [ele.author, ele.authorUrl]
       )
     })
@@ -148,7 +167,7 @@ function loadArticles() {
             FROM authors
             WHERE author=$5;
             `,
-              [ele.title, ele.category, ele.publishedOn, ele.body, ele.author]
+            [ele.title, ele.category, ele.publishedOn, ele.body, ele.author]
             )
           })
         })
